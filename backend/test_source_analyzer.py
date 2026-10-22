@@ -39,14 +39,54 @@ def example(n):
         with self.assertRaises(ValueError):
             analyze_python_source("def example(:\n    pass")
 
-    def test_unsupported_if(self):
+    def test_if_is_supported(self):
+      source = """
+  def example(n):
+      if n > 0:
+          return n
+  """
+      result = analyze_python_source(source)
+
+      self.assertEqual(result["complexity"], "O(1)")
+            
+    
+    def test_if_with_linear_branch(self):
         source = """
 def example(n):
     if n > 0:
-        return n
+        for i in range(n):
+            print(i)
+    else:
+        print("empty")
 """
-        with self.assertRaises(NotImplementedError):
-            analyze_python_source(source)
+        result = analyze_python_source(source)
+        self.assertEqual(result["complexity"], "O(n)")
+
+    def test_if_else_with_two_different_costs(self):
+        source = """
+def example(n):
+    if n > 0:
+        for i in range(n):
+            for j in range(n):
+                print(i, j)
+    else:
+        for i in range(n):
+            print(i)
+"""
+        result = analyze_python_source(source)
+        self.assertEqual(result["complexity"], "O(n^2)")
+
+    def test_if_with_constant_branches(self):
+        source = """
+def example(n):
+    if n > 0:
+        print("positive")
+    else:
+        print("not positive")
+"""
+        result = analyze_python_source(source)
+        self.assertEqual(result["complexity"], "O(1)")
+
 
 
 if __name__ == "__main__":

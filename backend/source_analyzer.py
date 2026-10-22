@@ -20,6 +20,28 @@ def analyze_statements(statements: list[ast.stmt]) -> dict[int, float]:
     return total_cost
 
 
+def worst_case_cost(
+    first: dict[int, float],
+    second: dict[int, float]
+) -> dict[int, float]:
+    """Choose the branch with the greater polynomial cost."""
+
+    exponents = sorted(set(first) | set(second), reverse=True)
+
+    for exponent in exponents:
+        first_coefficient = first.get(exponent, 0)
+        second_coefficient = second.get(exponent, 0)
+
+        if first_coefficient > second_coefficient:
+            return first.copy()
+
+        if second_coefficient > first_coefficient:
+            return second.copy()
+
+    return first.copy()
+
+
+
 def analyze_statement(statement: ast.stmt) -> dict[int, float]:
     """Estimate the cost of one supported Python statement."""
 
@@ -33,6 +55,17 @@ def analyze_statement(statement: ast.stmt) -> dict[int, float]:
         (ast.Assign, ast.AugAssign, ast.AnnAssign, ast.Expr, ast.Return, ast.Pass),
     ):
         return CONSTANT_COST.copy()
+
+    
+    if isinstance(statement, ast.If):
+        then_cost = analyze_statements(statement.body)
+        else_cost = analyze_statements(statement.orelse)
+
+        branch_cost = worst_case_cost(then_cost, else_cost)
+
+        # The condition is assumed to take constant time.
+        return add_costs(CONSTANT_COST, branch_cost)
+
 
     # Initially, support only: for i in range(n)
     if isinstance(statement, ast.For):
