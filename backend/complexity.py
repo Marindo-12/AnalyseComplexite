@@ -45,3 +45,32 @@ def complexity_class(terms: dict[int, float]) -> str:
         return "O(n)"
 
     return f"O(n^{degree})"
+
+
+def analyze_cost(cost: dict[int, float]) -> dict:
+    """Return the polynomial cost and its Big O classification."""
+
+    complexity = complexity_class(cost)
+
+    # Build a readable polynomial representation.
+    terms = []
+
+    for exponent in sorted(cost):
+        coefficient = cost[exponent]
+
+        if coefficient == 0:
+            continue
+
+        if exponent == 0:
+            terms.append(str(coefficient))
+        elif exponent == 1:
+            terms.append(f"{coefficient}n")
+        else:
+            terms.append(f"{coefficient}n^{exponent}")
+
+    expression = " + ".join(terms) if terms else "0"
+
+    return {
+        "expression": expression,
+        "complexity": complexity,
+    }
