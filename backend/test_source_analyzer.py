@@ -91,3 +91,41 @@ def example(n):
 
 if __name__ == "__main__":
     unittest.main()
+    
+    
+    def test_range_with_constant_bound(self):
+        source = """
+def example(n):
+    for i in range(100):
+        print(i)
+"""
+        result = analyze_python_source(source)
+        self.assertEqual(result["complexity"], "O(1)")
+
+    def test_range_with_start_and_variable_stop(self):
+        source = """
+def example(n):
+    for i in range(1, n):
+        print(i)
+"""
+        result = analyze_python_source(source)
+        self.assertEqual(result["complexity"], "O(n)")
+
+    def test_range_with_step_two(self):
+        source = """
+def example(n):
+    for i in range(0, n, 2):
+        print(i)
+"""
+        result = analyze_python_source(source)
+        self.assertEqual(result["complexity"], "O(n)")
+
+    def test_range_with_invalid_step(self):
+        source = """
+def example(n):
+    for i in range(0, n, 0):
+        print(i)
+"""
+        with self.assertRaises(NotImplementedError):
+            analyze_python_source(source)
+

@@ -49,3 +49,21 @@ def multiply_by_n(cost: dict[int, float]) -> dict[int, float]:
         for exponent, coefficient in cost.items()
         if coefficient != 0
     }
+
+
+def scale_cost(
+    cost: dict[int, float],
+    factor: int
+) -> dict[int, float]:
+    """Multiply every polynomial coefficient by a non-negative constant."""
+
+    validate_cost(cost)
+
+    if type(factor) is not int or factor < 0:
+        raise ValueError("Factor must be a non-negative integer")
+
+    return {
+        exponent: coefficient * factor
+        for exponent, coefficient in cost.items()
+        if coefficient != 0 and factor != 0
+    }

@@ -1,7 +1,8 @@
 
 import ast
+import textwrap
 
-from cost_model import add_costs, multiply_by_n
+from cost_model import add_costs, multiply_by_n, scale_cost
 from complexity import analyze_cost
 
 
@@ -68,34 +69,89 @@ def analyze_statement(statement: ast.stmt) -> dict[int, float]:
 
 
     # Initially, support only: for i in range(n)
+    
+    
     if isinstance(statement, ast.For):
         iterator = statement.iter
 
-        supported_loop = (
+        supported_range = (
             isinstance(iterator, ast.Call)
             and isinstance(iterator.func, ast.Name)
             and iterator.func.id == "range"
-            and len(iterator.args) == 1
-            and isinstance(iterator.args[0], ast.Name)
-            and iterator.args[0].id == "n"
+            and 1 <= len(iterator.args) <= 3
             and not iterator.keywords
         )
 
-        if not supported_loop:
+        if not supported_range:
             raise NotImplementedError(
-                "Currently supported loop syntax: for i in range(n)"
+                "Supported loops must use range(...)"
             )
 
-        body_cost = analyze_statements(statement.body)
+        args = iterator.args
 
-        # Each iteration has an overhead, even if the body is empty.
+        if len(args) == 1:
+            start_value = 0
+            stop = args[0]
+            step = 1
+        else:
+            start_node, stop = args[0], args[1]
+
+            if not (
+                isinstance(start_node, ast.Constant)
+                and type(start_node.value) is int
+            ):
+                raise NotImplementedError(
+                    "The range start must be a constant integer"
+                )
+
+            start_value = start_node.value
+            step = 1
+
+            if len(args) == 3:
+                step_node = args[2]
+
+                if not (
+                    isinstance(step_node, ast.Constant)
+                    and type(step_node.value) is int
+                    and step_node.value != 0
+                ):
+                    raise NotImplementedError(
+                        "The range step must be a non-zero integer constant"
+                    )
+
+                step = step_node.value
+
+        body_cost = analyze_statements(statement.body)
         per_iteration_cost = add_costs(body_cost, CONSTANT_COST)
 
-        # The loop repeats its body n times.
-        repeated_cost = multiply_by_n(per_iteration_cost)
+        if isinstance(stop, ast.Name) and stop.id == "n":
+            if step < 0:
+                raise NotImplementedError(
+                    "Negative steps with variable stop are not supported"
+                )
 
-        # Add a constant cost for loop initialization/setup.
+            repeated_cost = multiply_by_n(per_iteration_cost)
+
+        elif (
+            isinstance(stop, ast.Constant)
+            and type(stop.value) is int
+        ):
+            iteration_count = len(
+                range(start_value, stop.value, step)
+            )
+
+            repeated_cost = scale_cost(
+                per_iteration_cost,
+                iteration_count
+            )
+
+        else:
+            raise NotImplementedError(
+                "The range stop must be n or a constant integer"
+            )
+
         return add_costs(CONSTANT_COST, repeated_cost)
+
 
     raise NotImplementedError(
         f"Unsupported Python statement: {type(statement).__name__}"
@@ -106,9 +162,12 @@ def analyze_python_source(source: str) -> dict:
     """Parse Python source and estimate its polynomial time complexity."""
 
     try:
+        source = textwrap.dedent(source).strip()
         tree = ast.parse(source)
     except SyntaxError as error:
-        raise ValueError(f"Invalid Python syntax: {error.msg}") from error
+        raise ValueError(
+            f"Invalid Python syntax: {error.msg}"
+        ) from error
 
     cost = analyze_statements(tree.body)
     result = analyze_cost(cost)
