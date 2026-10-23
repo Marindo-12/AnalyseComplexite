@@ -64,8 +64,7 @@ def test_unsupported_language():
         },
     )
 
-    assert response.status_code == 400
-    assert "Python" in response.json()["detail"]
+    assert response.status_code == 422
 
 
 def test_empty_code_is_rejected():

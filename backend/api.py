@@ -1,3 +1,4 @@
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
@@ -11,7 +12,7 @@ app = FastAPI(
         "API qui estime la complexité temporelle "
         "et spatiale d'un programme Python."
     ),
-    version="0.1.0",
+    version="0.2.0",
 )
 
 
@@ -21,7 +22,8 @@ class AnalyzeRequest(BaseModel):
         max_length=50000,
         description="Code Python à analyser",
     )
-    language: str = Field(
+
+    language: Literal["python"] = Field(
         default="python",
         description="Langage du code source",
     )
@@ -43,12 +45,6 @@ def health_check():
 
 @app.post("/analyze")
 def analyze(request: AnalyzeRequest):
-    if request.language.lower() != "python":
-        raise HTTPException(
-            status_code=400,
-            detail="Pour le moment, seul Python est supporté.",
-        )
-
     try:
         return analyze_program(request.code)
 
